@@ -1,0 +1,79 @@
+# ─── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+wheels/
+
+# ─── Secrets & Config ──────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+*.secret
+secrets/
+credentials.json
+service-account*.json
+*-service-account.json
+
+# ─── Logs ──────────────────────────────────────────────────────────────────
+*.log
+logs/
+*.log.*
+
+# ─── Testing & Coverage ────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+.tox/
+
+# ─── Databases ─────────────────────────────────────────────────────────────
+*.sqlite3
+*.db
+
+# ─── Docker ────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── OS Junk ───────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+Thumbs.db
+desktop.ini
+.AppleDouble
+.LSOverride
+
+# ─── IDE / Editor ──────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+
+# ─── Build artifacts ───────────────────────────────────────────────────────
+*.pyc
+*.pyo
+*.so
+*.dylib
+*.dll
+
+# ─── Type checking ─────────────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+.pyright/

@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MeshEngine — Live Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --green:     #3fb950;
+      --red:       #f85149;
+      --amber:     #d29922;
+      --blue:      #58a6ff;
+      --purple:    #bc8cff;
+      --orange:    #ffa657;
+      --font:      'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 15px; font-weight: 600; color: var(--blue); letter-spacing: 0.5px; }
+    header h1 span { color: var(--muted); font-weight: 400; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .ws-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; color: var(--muted);
+    }
+    .ws-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--red); transition: background 0.3s;
+    }
+    .ws-dot.connected { background: var(--green); }
+    select {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); padding: 4px 8px; border-radius: 4px;
+      font-size: 12px; cursor: pointer;
+    }
+    select:focus { outline: 1px solid var(--blue); }
+
+    /* ── Main layout ──────────────────────────────────────────────────── */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Graph panel ──────────────────────────────────────────────────── */
+    .graph-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      min-width: 0;
+    }
+    .panel-title {
+      padding: 8px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    #graph-svg {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Right panel ──────────────────────────────────────────────────── */
+    .right-panel {
+      width: 360px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Metrics bar ──────────────────────────────────────────────────── */
+    .metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .metric-cell {
+      padding: 10px 14px;
+      border-right: 1px solid var(--border);
+    }
+    .metric-cell:last-child { border-right: none; }
+    .metric-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-value { font-size: 20px; font-weight: 700; margin-top: 2px; }
+    .metric-value.green  { color: var(--green); }
+    .metric-value.red    { color: var(--red); }
+    .metric-value.blue   { color: var(--blue); }
+    .metric-value.amber  { color: var(--amber); }
+    .metric-value.purple { color: var(--purple); }
+
+    /* ── Second row of metrics ────────────────────────────────────────── */
+    .metrics-bar2 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    /* ── Event log ────────────────────────────────────────────────────── */
+    .event-log-wrap {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #event-log {
+      flex: 1;
+      overflow-y: auto;
+      font-size: 11px;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+    }
+    #event-log::-webkit-scrollbar { width: 4px; }
+    #event-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .log-entry {
+      display: flex;
+      gap: 8px;
+      padding: 5px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .log-entry:hover { background: rgba(255,255,255,0.03); }
+    .log-ts  { color: var(--muted); flex-shrink: 0; }
+    .log-type {
+      flex-shrink: 0;
+      font-weight: 600;
+      min-width: 130px;
+    }
+    .log-detail { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .et-MESSAGE_SENT      { color: var(--blue); }
+    .et-MESSAGE_HOP       { color: var(--purple); }
+    .et-MESSAGE_DELIVERED { color: var(--green); }
+    .et-MESSAGE_FAILED    { color: var(--red); }
+    .et-NODE_DOWN         { color: var(--red); }
+    .et-NODE_RECOVERED    { color: var(--green); }
+    .et-ROUTE_COMPUTED    { color: var(--amber); }
+    .et-ROUTE_RECOMPUTED  { color: var(--orange); }
+    .et-SIMULATION_STARTED    { color: var(--blue); }
+    .et-SIMULATION_COMPLETED  { color: var(--green); }
+    .et-SIMULATION_FAILED     { color: var(--red); }
+    .et-PING              { color: #333; }
+    .et-CONNECTED         { color: var(--green); }
+
+    /* ── Path tracker ─────────────────────────────────────────────────── */
+    .path-tracker {
+      border-top: 1px solid var(--border);
+      padding: 10px 14px;
+      flex-shrink: 0;
+      min-height: 60px;
+    }
+    .path-tracker-label { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+    #active-path {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      font-size: 12px;
+    }
+    .path-node {
+      padding: 2px 8px;
+      border-radius: 3px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    .path-node.active { border-color: var(--amber); color: var(--amber); }
+    .path-node.done   { border-color: var(--green); color: var(--green); }
+    .path-arr { color: var(--muted); }
+
+    /* ── SVG elements ─────────────────────────────────────────────────── */
+    .node-circle { cursor: default; transition: fill 0.4s; }
+    .node-label  { font-size: 11px; font-weight: 600; fill: #e6edf3; pointer-events: none; }
+    .link-line   { stroke: #30363d; stroke-width: 1.5; }
+    .link-weight { font-size: 9px; fill: #555; }
+    .msg-dot     { pointer-events: none; }
+
+    /* ── Empty state ──────────────────────────────────────────────────── */
+    .empty-hint {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 12px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<header>
+  <h1>MeshEngine <span>/ Live Dashboard</span></h1>
+  <div class="header-right">
+    <div>
+      <label style="color:var(--muted);margin-right:6px;font-size:11px;">Network</label>
+      <select id="network-select"><option value="">— select —</option></select>
+    </div>
+    <div class="ws-badge">
+      <div class="ws-dot" id="ws-dot"></div>
+      <span id="ws-label">Disconnected</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Graph panel -->
+  <div class="graph-panel">
+    <div class="panel-title">Topology</div>
+    <svg id="graph-svg">
+      <defs>
+        <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#444" />
+        </marker>
+      </defs>
+      <g id="links-g"></g>
+      <g id="nodes-g"></g>
+      <g id="anim-g"></g>
+      <text class="empty-hint" id="empty-hint" x="50%" y="50%"
+            text-anchor="middle" dominant-baseline="middle"
+            fill="#444" font-size="13">Select a network to visualise</text>
+    </svg>
+  </div>
+
+  <!-- Right panel -->
+  <div class="right-panel">
+
+    <!-- Metrics rows -->
+    <div class="metrics-bar">
+      <div class="metric-cell">
+        <div class="metric-label">Total Sent</div>
+        <div class="metric-value blue" id="m-total">0</div>
+      </div>
+      <div class="metric-cell">
+        <div class="metric-label">Delivered</div>
+        <div class="metric-value green" id="m-success">0</div>
+      </div>
+      <div class="metric-cell">
+        <div class="metric-label">Failed</div>
+        <div class="metric-value red" id="m-failed">0</div>
+      </div>
+    </div>
+    <div class="metrics-bar2 metrics-bar">
+      <div class="metric-cell">
+        <div class="metric-label">Avg Latency</div>
+        <div class="metric-value amber" id="m-latency">—</div>
+      </div>
+      <div class="metric-cell">
+        <div class="metric-label">Success %</div>
+        <div class="metric-value green" id="m-rate">—</div>
+      </div>
+      <div class="metric-cell">
+        <div class="metric-label">Reroutes</div>
+        <div class="metric-value purple" id="m-reroutes">0</div>
+      </div>
+    </div>
+
+    <!-- Event log -->
+    <div class="event-log-wrap">
+      <div class="panel-title">Live Events</div>
+      <div id="event-log"></div>
+    </div>
+
+    <!-- Active path tracker -->
+    <div class="path-tracker">
+      <div class="path-tracker-label">Active Message Path</div>
+      <div id="active-path"><span style="color:var(--muted)">—</span></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// MeshEngine Dashboard — Vanilla JS + SVG
+// Connects to /ws/simulation and renders the topology in real time.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const BASE = `${location.protocol}//${location.host}`;
+const WS_URL = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/ws/simulation`;
+
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  networkId: null,
+  nodes: {},           // id → { id, name, x, y, status, svgX, svgY }
+  links: [],           // [{ source_id, target_id, weight }]
+  nodeEls: {},         // id → SVGCircleElement
+  activeMsgPath: [],   // current message path (node ids)
+  activeMsgHop: 0,
+  metrics: { total: 0, success: 0, failed: 0, reroutes: 0, latSum: 0, latCnt: 0 },
+  ws: null,
+};
+
+// ── SVG helpers ────────────────────────────────────────────────────────────
+const svg     = document.getElementById('graph-svg');
+const linksG  = document.getElementById('links-g');
+const nodesG  = document.getElementById('nodes-g');
+const animG   = document.getElementById('anim-g');
+const hint    = document.getElementById('empty-hint');
+
+function svgSize() {
+  return { w: svg.clientWidth || 700, h: svg.clientHeight || 400 };
+}
+
+function computeLayout(nodes) {
+  if (!nodes.length) return;
+  const xs = nodes.map(n => n.x), ys = nodes.map(n => n.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const rangeX = maxX - minX || 1, rangeY = maxY - minY || 1;
+  const { w, h } = svgSize();
+  const pad = 60;
+
+  nodes.forEach(n => {
+    n.svgX = pad + ((n.x - minX) / rangeX) * (w - 2 * pad);
+    n.svgY = pad + ((n.y - minY) / rangeY) * (h - 2 * pad);
+  });
+}
+
+function renderGraph() {
+  linksG.innerHTML = '';
+  nodesG.innerHTML = '';
+  state.nodeEls = {};
+  hint.style.display = 'none';
+
+  const nodes = Object.values(state.nodes);
+  if (!nodes.length) { hint.style.display = ''; return; }
+
+  computeLayout(nodes);
+
+  // Links
+  state.links.forEach(lnk => {
+    const s = state.nodes[lnk.source_id];
+    const t = state.nodes[lnk.target_id];
+    if (!s || !t) return;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', s.svgX); line.setAttribute('y1', s.svgY);
+    line.setAttribute('x2', t.svgX); line.setAttribute('y2', t.svgY);
+    line.classList.add('link-line');
+    linksG.appendChild(line);
+
+    // Weight label at midpoint
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    lbl.setAttribute('x', (s.svgX + t.svgX) / 2);
+    lbl.setAttribute('y', (s.svgY + t.svgY) / 2 - 4);
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.classList.add('link-weight');
+    lbl.textContent = `${lnk.weight}ms`;
+    linksG.appendChild(lbl);
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', n.svgX);
+    circle.setAttribute('cy', n.svgY);
+    circle.setAttribute('r', 22);
+    circle.classList.add('node-circle');
+    circle.setAttribute('fill', nodeColor(n.status));
+    circle.setAttribute('stroke', '#0d1117');
+    circle.setAttribute('stroke-width', '2');
+    circle.dataset.nodeId = n.id;
+    state.nodeEls[n.id] = circle;
+
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', n.svgX);
+    label.setAttribute('y', n.svgY + 1);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('dominant-baseline', 'middle');
+    label.classList.add('node-label');
+    label.textContent = n.name.replace(/^node-?/i, '');
+
+    // Status indicator dot
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('cx', n.svgX + 16);
+    dot.setAttribute('cy', n.svgY - 16);
+    dot.setAttribute('r', 5);
+    dot.setAttribute('fill', n.status === 'UP' ? '#3fb950' : '#f85149');
+    dot.setAttribute('stroke', '#0d1117');
+    dot.setAttribute('stroke-width', '1.5');
+    dot.dataset.statusDot = n.id;
+
+    g.appendChild(circle);
+    g.appendChild(label);
+    g.appendChild(dot);
+    nodesG.appendChild(g);
+  });
+}
+
+function nodeColor(status) {
+  return status === 'UP' ? '#1f3a2a' : '#3a1f1f';
+}
+
+function updateNodeStatus(nodeId, status) {
+  const n = state.nodes[nodeId];
+  if (n) {
+    n.status = status;
+    const circle = state.nodeEls[nodeId];
+    if (circle) circle.setAttribute('fill', nodeColor(status));
+    // Update status dot
+    const dot = svg.querySelector(`[data-status-dot="${nodeId}"]`);
+    if (dot) dot.setAttribute('fill', status === 'UP' ? '#3fb950' : '#f85149');
+  }
+}
+
+// ── Message animation ──────────────────────────────────────────────────────
+function animateHop(fromId, toId, durationMs = 700) {
+  const from = state.nodes[fromId];
+  const to   = state.nodes[toId];
+  if (!from || !to) return;
+
+  const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  dot.setAttribute('r', 9);
+  dot.setAttribute('fill', '#d29922');
+  dot.setAttribute('stroke', '#ffa657');
+  dot.setAttribute('stroke-width', '2');
+  dot.classList.add('msg-dot');
+  animG.appendChild(dot);
+
+  const fx = from.svgX, fy = from.svgY;
+  const tx = to.svgX,   ty = to.svgY;
+  const start = performance.now();
+
+  function step(now) {
+    const t = Math.min((now - start) / durationMs, 1);
+    // easeInOutQuad
+    const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    dot.setAttribute('cx', fx + (tx - fx) * e);
+    dot.setAttribute('cy', fy + (ty - fy) * e);
+    if (t < 1) {
+      requestAnimationFrame(step);
+    } else {
+      // Linger briefly at destination then fade
+      setTimeout(() => {
+        dot.setAttribute('opacity', '0');
+        dot.style.transition = 'opacity 0.3s';
+        setTimeout(() => animG.contains(dot) && animG.removeChild(dot), 350);
+      }, 200);
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+// ── Path tracker ───────────────────────────────────────────────────────────
+function renderPath(path, completedHops) {
+  const container = document.getElementById('active-path');
+  container.innerHTML = '';
+  if (!path || !path.length) { container.innerHTML = '<span style="color:var(--muted)">—</span>'; return; }
+
+  path.forEach((nodeId, i) => {
+    if (i > 0) {
+      const arr = document.createElement('span');
+      arr.className = 'path-arr';
+      arr.textContent = '→';
+      container.appendChild(arr);
+    }
+    const nd = document.createElement('span');
+    nd.className = 'path-node' +
+      (i < completedHops ? ' done' : i === completedHops ? ' active' : '');
+    nd.textContent = state.nodes[nodeId]?.name ?? nodeId;
+    container.appendChild(nd);
+  });
+}
+
+// ── Event log ──────────────────────────────────────────────────────────────
+const MAX_LOG_ENTRIES = 200;
+
+function logEvent(event) {
+  if (event.event_type === 'PING') return; // suppress heartbeats
+
+  const log   = document.getElementById('event-log');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+
+  const ts = new Date(event.timestamp || Date.now()).toLocaleTimeString('en', { hour12: false });
+
+  const detail = buildDetail(event);
+
+  entry.innerHTML = `
+    <span class="log-ts">${ts}</span>
+    <span class="log-type et-${event.event_type}">${event.event_type}</span>
+    <span class="log-detail">${detail}</span>
+  `;
+
+  log.insertBefore(entry, log.firstChild); // newest at top
+
+  // Trim old entries
+  while (log.children.length > MAX_LOG_ENTRIES) {
+    log.removeChild(log.lastChild);
+  }
+}
+
+function buildDetail(ev) {
+  switch (ev.event_type) {
+    case 'MESSAGE_SENT':
+      return `${shortId(ev.source_id)} → ${shortId(ev.destination_id)}`;
+    case 'MESSAGE_HOP':
+      return `hop ${ev.hop}  ${shortId(ev.from_node_id)} → ${shortId(ev.to_node_id)}  ${ev.link_latency_ms}ms`;
+    case 'MESSAGE_DELIVERED':
+      return `${ev.total_latency_ms}ms  ${ev.hop_count} hops`;
+    case 'MESSAGE_FAILED':
+      return ev.reason || ev.error || '';
+    case 'NODE_DOWN':
+      return nodeName(ev.node_id);
+    case 'NODE_RECOVERED':
+      return nodeName(ev.node_id);
+    case 'ROUTE_COMPUTED':
+      return `${ev.phase}  ${ev.latency_ms}ms  hops:${ev.hop_count}`;
+    case 'ROUTE_RECOMPUTED':
+      return `rerouted:${ev.rerouted}  ${ev.latency_ms}ms`;
+    case 'SIMULATION_STARTED':
+      return `${shortId(ev.source_id)} → ${shortId(ev.destination_id)}`;
+    case 'SIMULATION_COMPLETED':
+      return `msg:${shortId(ev.message_id)}`;
+    case 'SIMULATION_FAILED':
+      return ev.reason || '';
+    case 'CONNECTED':
+      return ev.endpoint || '';
+    default:
+      return '';
+  }
+}
+
+function shortId(id) {
+  if (!id) return '?';
+  const n = state.nodes[id];
+  return n ? n.name.replace(/^node-?/i, '') : id.slice(0, 8);
+}
+function nodeName(id) {
+  return state.nodes[id]?.name ?? id?.slice(0, 8) ?? '?';
+}
+
+// ── Metrics (local counters updated from events) ───────────────────────────
+function bumpMetric(key, val = 1) {
+  state.metrics[key] = (state.metrics[key] || 0) + val;
+  refreshMetricsUI();
+}
+
+function refreshMetricsUI() {
+  const m = state.metrics;
+  document.getElementById('m-total').textContent   = m.total;
+  document.getElementById('m-success').textContent = m.success;
+  document.getElementById('m-failed').textContent  = m.failed;
+  document.getElementById('m-reroutes').textContent = m.reroutes;
+  const avgLat = m.latCnt > 0 ? (m.latSum / m.latCnt).toFixed(1) : '—';
+  document.getElementById('m-latency').textContent  = m.latCnt > 0 ? `${avgLat}ms` : '—';
+  const rate = m.total > 0 ? ((m.success / m.total) * 100).toFixed(1) : '—';
+  document.getElementById('m-rate').textContent = m.total > 0 ? `${rate}%` : '—';
+}
+
+// Pull server-side metrics occasionally (complements local live counters)
+async function fetchMetrics() {
+  if (!state.networkId) return;
+  try {
+    const r = await fetch(`${BASE}/metrics/${state.networkId}`);
+    if (!r.ok) return;
+    const m = await r.json();
+    // Only override if server values are higher (source of truth)
+    state.metrics.total   = Math.max(state.metrics.total,   m.total_messages);
+    state.metrics.success = Math.max(state.metrics.success, m.successful_deliveries);
+    state.metrics.failed  = Math.max(state.metrics.failed,  m.failed_deliveries);
+    if (m.avg_latency_ms > 0) {
+      document.getElementById('m-latency').textContent = `${m.avg_latency_ms}ms`;
+    }
+    document.getElementById('m-rate').textContent = m.total_messages > 0
+      ? `${(m.success_rate * 100).toFixed(1)}%` : '—';
+    // Global reroutes
+    const gr = await fetch(`${BASE}/metrics`);
+    if (gr.ok) {
+      const gm = await gr.json();
+      state.metrics.reroutes = gm.total_reroutes;
+      document.getElementById('m-reroutes').textContent = gm.total_reroutes;
+    }
+  } catch (_) {}
+}
+
+// ── Event dispatch ─────────────────────────────────────────────────────────
+function handleEvent(event) {
+  logEvent(event);
+
+  switch (event.event_type) {
+    case 'MESSAGE_SENT':
+      bumpMetric('total');
+      state.activeMsgPath = [];
+      state.activeMsgHop  = 0;
+      break;
+
+    case 'MESSAGE_HOP':
+      if (!state.activeMsgPath.length && event.from_node_id) {
+        // Bootstrap path from first hop
+        state.activeMsgPath = [event.from_node_id];
+      }
+      if (event.to_node_id && !state.activeMsgPath.includes(event.to_node_id)) {
+        state.activeMsgPath.push(event.to_node_id);
+      }
+      state.activeMsgHop = event.hop;
+      animateHop(event.from_node_id, event.to_node_id);
+      renderPath(state.activeMsgPath, state.activeMsgHop);
+      break;
+
+    case 'MESSAGE_DELIVERED':
+      bumpMetric('success');
+      bumpMetric('latSum', event.total_latency_ms || 0);
+      bumpMetric('latCnt');
+      if (event.path) {
+        state.activeMsgPath = event.path;
+        state.activeMsgHop  = event.hop_count || event.path.length - 1;
+        renderPath(state.activeMsgPath, state.activeMsgHop);
+      }
+      break;
+
+    case 'MESSAGE_FAILED':
+      bumpMetric('failed');
+      break;
+
+    case 'NODE_DOWN':
+      updateNodeStatus(event.node_id, 'DOWN');
+      break;
+
+    case 'NODE_RECOVERED':
+      updateNodeStatus(event.node_id, 'UP');
+      break;
+
+    case 'ROUTE_RECOMPUTED':
+      if (event.rerouted) bumpMetric('reroutes');
+      if (event.path) renderPath(event.path, 0);
+      break;
+
+    case 'ROUTE_COMPUTED':
+      if (event.path) renderPath(event.path, 0);
+      break;
+  }
+}
+
+// ── WebSocket ──────────────────────────────────────────────────────────────
+function connect() {
+  if (state.ws) { try { state.ws.close(); } catch (_) {} }
+
+  const ws = new WebSocket(WS_URL);
+  state.ws = ws;
+
+  ws.onopen = () => {
+    document.getElementById('ws-dot').classList.add('connected');
+    document.getElementById('ws-label').textContent = 'Connected';
+  };
+
+  ws.onmessage = ({ data }) => {
+    try { handleEvent(JSON.parse(data)); } catch (_) {}
+  };
+
+  ws.onclose = () => {
+    document.getElementById('ws-dot').classList.remove('connected');
+    document.getElementById('ws-label').textContent = 'Reconnecting…';
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+// ── Network loader ─────────────────────────────────────────────────────────
+async function loadNetworks() {
+  try {
+    const r = await fetch(`${BASE}/network/list`);
+    const nets = await r.json();
+    const sel = document.getElementById('network-select');
+    sel.innerHTML = '<option value="">— select —</option>';
+    nets.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n.id;
+      opt.textContent = `${n.name}  (${n.node_count} nodes, ${n.link_count} links)`;
+      sel.appendChild(opt);
+    });
+    // Auto-select first network
+    if (nets.length > 0) {
+      sel.value = nets[0].id;
+      await loadNetwork(nets[0].id);
+    }
+  } catch (err) {
+    console.error('Failed to load networks', err);
+  }
+}
+
+async function loadNetwork(networkId) {
+  if (!networkId) return;
+  state.networkId = networkId;
+  state.nodes = {};
+  state.links = [];
+
+  try {
+    const r = await fetch(`${BASE}/network/state/${networkId}`);
+    const data = await r.json();
+
+    data.nodes.forEach(n => {
+      state.nodes[n.id] = { ...n, svgX: 0, svgY: 0 };
+    });
+    state.links = data.links || [];
+
+    renderGraph();
+    await fetchMetrics();
+  } catch (err) {
+    console.error('Failed to load network', err);
+    hint.style.display = '';
+    hint.textContent = 'Failed to load network state.';
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+document.getElementById('network-select').addEventListener('change', e => {
+  if (e.target.value) loadNetwork(e.target.value);
+});
+
+window.addEventListener('resize', () => {
+  if (Object.keys(state.nodes).length) renderGraph();
+});
+
+// Refresh server metrics every 10s
+setInterval(fetchMetrics, 10_000);
+
+// Boot
+connect();
+loadNetworks();
+</script>
+</body>
+</html>
