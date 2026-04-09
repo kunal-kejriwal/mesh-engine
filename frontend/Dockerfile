@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install deps
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy frontend source
 COPY frontend/ .
