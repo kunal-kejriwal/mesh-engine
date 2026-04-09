@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-mesh-bg text-gray-100 font-mono antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-mesh-surface;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-mesh-border rounded;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-mesh-accent text-mesh-bg font-semibold rounded hover:bg-blue-400 transition-colors text-sm;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 border border-mesh-border text-gray-300 rounded hover:border-mesh-accent hover:text-mesh-accent transition-colors text-sm;
+  }
+  .card {
+    @apply bg-mesh-surface border border-mesh-border rounded-lg p-5;
+  }
+  .input {
+    @apply w-full bg-mesh-bg border border-mesh-border rounded px-3 py-2 text-gray-100 text-sm placeholder-mesh-muted focus:outline-none focus:border-mesh-accent transition-colors;
+  }
+  .label {
+    @apply block text-xs text-mesh-muted mb-1 uppercase tracking-wide;
+  }
+  .badge-up {
+    @apply inline-block px-2 py-0.5 rounded text-xs font-semibold bg-green-900/50 text-mesh-green border border-green-800;
+  }
+  .badge-down {
+    @apply inline-block px-2 py-0.5 rounded text-xs font-semibold bg-red-900/50 text-mesh-red border border-red-800;
+  }
+}

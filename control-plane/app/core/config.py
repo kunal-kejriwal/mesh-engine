@@ -14,6 +14,14 @@ class Settings(BaseSettings):
     default_link_threshold: float = 150.0  # Euclidean distance units
     latency_distance_factor: float = 0.5   # ms per distance unit
 
+    # Auth
+    jwt_secret: str = "change-me-in-production-use-a-long-random-string"
+    jwt_expiry_seconds: int = 3600  # 1 hour
+
+    # Rate limiting
+    rate_limit_requests: int = 10
+    rate_limit_window_seconds: int = 60
+
     model_config = {"env_file": ".env"}
 
 
