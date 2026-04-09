@@ -15,7 +15,8 @@ import os
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import message, metrics, network, node, simulation, websocket
+from app.api import message, metrics, network, node, simulation, websocket, auth, nodes, history
+from app.middleware.rate_limit import RateLimitMiddleware
 from app.core.config import get_settings
 from app.core.connection_manager import get_connection_manager
 from app.core.database import create_tables
@@ -65,6 +66,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(
+    RateLimitMiddleware,
+    max_requests=settings.rate_limit_requests,
+    window_seconds=settings.rate_limit_window_seconds,
+)
+
 
 # ── Global domain exception handler ─────────────────────────────────────────
 
@@ -84,6 +91,9 @@ app.include_router(message.router)
 app.include_router(simulation.router)
 app.include_router(metrics.router)
 app.include_router(websocket.router)
+app.include_router(auth.router)
+app.include_router(nodes.router)
+app.include_router(history.router)
 
 
 # ── Dashboard (static HTML) ───────────────────────────────────────────────────
