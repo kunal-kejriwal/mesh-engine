@@ -22,6 +22,17 @@ class Settings(BaseSettings):
     rate_limit_requests: int = 10
     rate_limit_window_seconds: int = 60
 
+    # OAuth 2.0 — Google
+    oauth_google_client_id: str = ""
+    oauth_google_client_secret: str = ""
+
+    # OAuth 2.0 — GitHub
+    oauth_github_client_id: str = ""
+    oauth_github_client_secret: str = ""
+
+    # OAuth redirect URI (must match provider app config)
+    oauth_redirect_uri: str = "http://localhost:3000/oauth/callback"
+
     model_config = {"env_file": ".env"}
 
 

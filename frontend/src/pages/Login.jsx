@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { getOAuthUrl } from '../api'
 
 export default function Login() {
   const { login } = useAuth()
@@ -75,6 +76,19 @@ export default function Login() {
           </button>
         </form>
 
+        {/* OAuth divider — additive section */}
+        <div className="mt-5">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 border-t border-mesh-border" />
+            <span className="text-xs text-mesh-muted">or continue with</span>
+            <div className="flex-1 border-t border-mesh-border" />
+          </div>
+          <div className="flex gap-3 mt-3">
+            <OAuthButton provider="google" label="Google" />
+            <OAuthButton provider="github" label="GitHub" />
+          </div>
+        </div>
+
         <p className="text-center text-mesh-muted text-sm mt-4">
           No account?{' '}
           <Link to="/register" className="text-mesh-accent hover:underline">
@@ -82,6 +96,40 @@ export default function Login() {
           </Link>
         </p>
       </div>
+    </div>
+  )
+}
+
+function OAuthButton({ provider, label }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleClick = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await getOAuthUrl(provider)
+      // Add provider to state so OAuthCallback can identify it
+      const url = new URL(res.data.url)
+      url.searchParams.set('state', provider)
+      window.location.href = url.toString()
+    } catch (e) {
+      const detail = e.response?.data?.detail || e.message
+      setError(typeof detail === 'string' ? detail : 'OAuth unavailable')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex-1">
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        className="w-full py-2 text-xs rounded border border-mesh-border text-mesh-muted hover:border-mesh-accent hover:text-gray-100 transition-colors disabled:opacity-40"
+      >
+        {loading ? '…' : label}
+      </button>
+      {error && <p className="text-xs text-mesh-red mt-1 text-center">{error}</p>}
     </div>
   )
 }

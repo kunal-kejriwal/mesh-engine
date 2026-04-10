@@ -211,7 +211,7 @@ Stop nginx temporarily (it's running inside Docker on port 80 — we need port 8
 
 ```bash
 docker compose stop frontend
-sudo certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
+sudo certbot certonly --standalone -d thedevngn.com -d www.thedevngn.com
 docker compose start frontend
 ```
 
@@ -227,16 +227,16 @@ Paste:
 ```nginx
 server {
     listen 80;
-    server_name yourdomain.com www.yourdomain.com;
+    server_name thedevngn.com www.thedevngn.com;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name yourdomain.com www.yourdomain.com;
+    server_name thedevngn.com www.thedevngn.com;
 
-    ssl_certificate     /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/thedevngn.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/thedevngn.com/privkey.pem;
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
 
@@ -323,10 +323,10 @@ sudo systemctl start meshengine
 
 | URL | What it serves |
 |---|---|
-| `https://yourdomain.com` | React frontend (homepage, docs, dashboard) |
-| `https://yourdomain.com/api/health` | FastAPI health check |
-| `https://yourdomain.com/api/docs` | FastAPI Swagger UI |
-| `wss://yourdomain.com/ws/stream` | Live WebSocket event feed |
+| `https://thedevngn.com` | React frontend (homepage, docs, dashboard) |
+| `https://thedevngn.com/api/health` | FastAPI health check |
+| `https://thedevngn.com/api/docs` | FastAPI Swagger UI |
+| `wss://thedevngn.com/ws/stream` | Live WebSocket event feed |
 
 ---
 

@@ -42,3 +42,20 @@ export const getHistory = () => client.get('/history')
 
 // ── Networks (public) ─────────────────────────────────────────────────────────
 export const listNetworks = () => client.get('/network/list')
+export const getNetworkState = (id) => client.get(`/network/state/${id}`)
+export const createNetwork = (data) => client.post('/network/create', data)
+
+// ── Routing + Simulation ─────────────────────────────────────────────────────
+export const runSimulation = (data) => client.post('/simulation/start', data)
+export const failNode = (nodeId) => client.post(`/node/fail/${nodeId}`)
+export const recoverNode = (nodeId) => client.post(`/node/recover/${nodeId}`)
+
+// ── Lab presets ───────────────────────────────────────────────────────────────
+export const listPresets = () => client.get('/lab/presets')
+export const getPreset = (name) => client.get(`/lab/presets/${name}`)
+export const deployPreset = (name) => client.post(`/lab/presets/${name}/deploy`)
+
+// ── OAuth ─────────────────────────────────────────────────────────────────────
+export const getOAuthUrl = (provider) => client.get(`/oauth/url/${provider}`)
+export const oauthCallback = (provider, code, redirectUri) =>
+  client.post('/oauth/callback', { provider, code, redirect_uri: redirectUri })

@@ -65,7 +65,7 @@ services:
       context: .                      # root context so .md files are included
       dockerfile: frontend/Dockerfile
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - control_plane
     restart: unless-stopped
