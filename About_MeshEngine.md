@@ -2,147 +2,100 @@
 
 ## What It Is
 
-MeshEngine is a backend simulation platform for modelling self-healing drone mesh networks. Given a set of nodes placed on a 2D grid, it:
+MeshEngine is a production-grade interactive distributed systems laboratory. It simulates self-healing drone mesh networks for disaster recovery and defence communication scenarios.
 
-- Auto-generates weighted communication links between nearby nodes
-- Routes messages hop-by-hop using Dijkstra's shortest-path algorithm
-- Propagates real-time failure and recovery events via Redis Pub/Sub
-- Streams live topology changes to connected clients over WebSocket
+Given a set of nodes placed on a 2D coordinate grid, MeshEngine:
 
-It is not a networking library or a real radio-frequency simulator. It is a controlled environment for testing routing logic, failure scenarios, and real-time event pipelines.
+1. **Auto-generates a weighted graph** — links all node pairs within a configurable Euclidean distance threshold
+2. **Routes messages via Dijkstra** — computes shortest paths weighted by link latency
+3. **Simulates failures** — marks nodes DOWN, removes them from the routing graph
+4. **Self-heals** — immediately recomputes routes around failed nodes
+5. **Streams all events** — Redis Pub/Sub + WebSocket deliver every hop, failure, and reroute in real time
+6. **Visualizes the topology** — interactive SVG graph with live packet animations
+7. **Explains routing decisions** — plain-English explainability layer maps Dijkstra choices to system state
 
 ---
 
 ## Why It Was Built
 
-Distributed systems research and defence/disaster-recovery planning increasingly rely on drone swarms that form ad-hoc mesh networks. These networks must:
+Mesh networks are the backbone of resilient communication in environments where centralized infrastructure is unavailable or has been destroyed — disaster zones, military operations, autonomous drone swarms. Understanding how these networks route, self-heal, and degrade under failure is critical for system designers.
 
-- Continue operating when individual nodes fail unexpectedly
-- Re-route traffic around failures without manual intervention (self-healing)
-- Give operators real-time visibility into the topology
-
-Existing simulation tools are either too domain-specific (RF propagation simulators) or too general (graph libraries with no async event model). MeshEngine fills that gap: it is purpose-built for async, event-driven mesh routing simulation with an HTTP + WebSocket interface.
-
----
-
-## Architecture Overview
-
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                          CONTROL PLANE                             │
-│                      (FastAPI + PostgreSQL)                        │
-│                                                                    │
-│  /network  ─┐                                                      │
-│  /node     ─┼──▶  NetworkService / RoutingService / MessageService │
-│  /message  ─┘            │                                         │
-│                    Dijkstra Engine                                 │
-└──────────────────────────┬─────────────────────────────────────────┘
-                           │ publish events
-                  ┌────────▼────────┐
-                  │      Redis      │
-                  │  Pub/Sub topics │
-                  └────────┬────────┘
-                           │ subscribe
-           ┌───────────────┼───────────────┐
-           │               │               │
-     ┌─────▼──────┐  ┌─────▼──────┐  ┌────▼──────────┐
-     │ NodeWorker │  │ NodeWorker │  │  WebSocket     │
-     │ (worker-1) │  │ (worker-N) │  │  /ws/stream    │
-     └────────────┘  └────────────┘  └────────────────┘
-```
+MeshEngine provides a safe, observable, interactive environment to:
+- **Learn** distributed routing concepts visually
+- **Experiment** with failure injection without real-world consequences
+- **Demonstrate** self-healing properties to stakeholders
+- **Validate** routing algorithms against real topology scenarios
 
 ---
 
-## Key Components
+## What's New in v2.0 — Interactive Lab Edition
 
-### Control Plane (`control-plane/`)
+### Simulation Lab
+A full interactive control center:
+- **Preset scenarios** — one-click topologies: Dense Grid, Sparse Web, Star Hub, Mid-Route Failure
+- **Custom networks** — Grid and Random generators with configurable parameters
+- **MessageSender** — select nodes, inject failures, run simulations, see results instantly
+- **Explainability** — "Node C excluded due to DOWN status during routing computation"
 
-FastAPI application. Owns the REST API, persistence, and routing logic.
+### Network Visualizer
+- Enhanced SVG topology renderer
+- Live packet animation on WebSocket events
+- Visual state system: ACTIVE (green), DOWN (red ×), HOP (blue glow), ROUTE (yellow)
+- Marching-dashes edge animation during packet traversal
 
-| Module | Responsibility |
-|---|---|
-| `app/api/network.py` | Create networks, inspect topology |
-| `app/api/node.py` | Inject failures / recoveries |
-| `app/api/message.py` | Send messages, retrieve route logs |
-| `app/api/simulation.py` | Batch simulation runs |
-| `app/api/websocket.py` | Live event stream (WebSocket) |
-| `app/api/auth.py` | User registration + JWT login |
-| `app/api/nodes.py` | Authenticated node CRUD |
-| `app/api/history.py` | Per-user action log |
-| `app/engine/dijkstra.py` | Failure-aware Dijkstra |
-| `app/core/redis_client.py` | Shared Redis connection |
-| `app/core/connection_manager.py` | WebSocket fan-out |
+### Observability
+- System status panel (Redis, WS, nodes, event rate)
+- Filterable event timeline with 200-event buffer
+- Route insights with Dijkstra explainability layer
 
-### Routing Engine (`app/engine/dijkstra.py`)
+### Failure Control
+- Per-node FAIL / RECOVER buttons
+- Quick actions: Fail Random, Recover All
+- Impact analysis: HEALTHY / IMPAIRED / DEGRADED / CRITICAL
+- Dijkstra impact explanation per failure state
 
-Pure Python implementation of Dijkstra's algorithm operating on an adjacency dictionary. Nodes with `status=DOWN` are excluded from the graph before traversal. Complexity: O((V+E) log V).
-
-### Redis Pub/Sub Layer
-
-Three channels:
-- `mesh:message:flow` — hop-by-hop delivery events
-- `mesh:node:events` — failure and recovery notifications
-- `mesh:simulation:*` — simulation start/end and progress frames
-
-### Node Workers (`node-worker/`)
-
-Async Python processes that subscribe to Redis channels and log events. In a real deployment, these would represent actual edge-compute units. In simulation, they demonstrate that the event bus decouples producers from consumers correctly.
-
-### Persistence (PostgreSQL)
-
-SQLAlchemy async ORM. Four tables:
-- `networks` — topology metadata
-- `nodes` — drone node positions and status
-- `links` — weighted edges between nodes
-- `messages` — message history and route logs
-
-Additional tables added for auth/history:
-- `users` — user accounts
-- `action_history` — per-user action audit log
+### OAuth 2.0 Authentication
+- Google and GitHub OAuth in addition to username/password
+- Server-side code exchange — secrets never leave the backend
+- Issues same JWT format — no frontend auth changes required
 
 ---
 
-## Design Decisions
+## Design Principles
 
-**FastAPI over Flask/Django** — native async support is essential for WebSocket fan-out and concurrent Pub/Sub subscriptions without a thread pool.
+### 1. Event-Driven
+Every system state change emits an event. No polling the database for state. Consumers subscribe to events.
 
-**Dijkstra over A\*** — simpler to reason about and sufficient for small-to-medium grids (< 500 nodes). A* would be preferable for very large grids with meaningful heuristics.
+### 2. Fail-Safe Extensions
+New components are isolated. If the Simulation Lab tab fails to render, the existing LiveViz and AllNodes tabs still work. If WebSocket disconnects, existing polling-based tabs are unaffected.
 
-**Redis Pub/Sub over Kafka/RabbitMQ** — Redis is already a dependency (for caching/rate limiting). Pub/Sub keeps the dependency count low and delivers sub-millisecond fanout for simulation purposes. For production scale, Kafka would be the right replacement.
+### 3. Observability First
+Every significant operation logs a structured JSON event. The Observability tab surfaces these without any additional backend work.
 
-**PostgreSQL over SQLite** — real async support (asyncpg driver). SQLite has limited async story and no concurrent writes.
+### 4. Explainability by Design
+The routing engine's decisions are not a black box. Every route computation includes an explanation that maps algorithmic choices (exclude DOWN nodes, minimize edge weight sum) to observable system state.
 
-**JWT over session cookies** — stateless auth suits a horizontally-scalable API; no shared session store needed.
-
-**In-process rate limiting with Redis counters** — avoids an external API gateway for demo/development. Production deployments should push this to Nginx or a CDN.
-
----
-
-## Limitations
-
-1. **No real RF propagation** — links are modelled by Euclidean distance only. Signal interference, obstacles, and power levels are not simulated.
-
-2. **Single-region Redis** — Pub/Sub is not replicated. A Redis failure silently drops events.
-
-3. **Dijkstra recalculates on every send** — there is no persistent routing table. For dense networks (> 1000 nodes) this is a bottleneck.
-
-4. **Node workers are stateless loggers** — in a real system, workers would execute payloads, maintain state, and report back. Here they only demonstrate subscription patterns.
-
-5. **No TLS between internal services** — suitable for local/demo deployments only.
-
-6. **JWT is not revocable** — a stolen token is valid until expiry. A token blocklist (Redis SET) is the standard fix; not yet implemented.
+### 5. Additive Architecture
+v2.0 added zero modifications to existing business logic. New features are isolated modules that consume existing APIs and events through clearly defined interfaces.
 
 ---
 
-## Future Scope
+## Known Limitations
 
-| Area | Enhancement |
-|---|---|
-| Routing | Adaptive routing with real-time link-weight updates based on congestion |
-| Workers | Stateful workers that execute arbitrary payloads (Python, WASM, containers) |
-| Persistence | Time-series storage (TimescaleDB) for latency and throughput analytics |
-| Auth | OAuth 2.0 / OIDC integration, token revocation |
-| Deployment | Helm chart for Kubernetes, Terraform for GCP provisioning |
-| Simulation | Probabilistic failure injection (Chaos Monkey style) |
-| Visualization | 3D topology view, animated message traces |
-| Multi-network | Cross-network message bridging (gateway nodes) |
+- **WebSocket fan-out is per-instance** — multi-instance deployments require a Redis-backed broadcast strategy for the ConnectionManager
+- **Routing graph is rebuilt per request** — intentional for correctness; may be slow for very large networks (1000+ nodes)
+- **In-memory rate limiter** — the sliding window uses Redis keys tied to the process; effective for single-instance but not distributed rate limiting
+- **OAuth accounts and password accounts are separate** — logging in with Google creates a separate user from an existing password account with the same email (unless they share the same username marker)
+- **No persistent event store** — WebSocket events are in-memory only; the event timeline resets on page refresh
+
+---
+
+## Future Directions
+
+- **Graph partitioning detection** — automatically detect when the network splits into disconnected components
+- **Multi-path routing** — expose k-shortest paths for redundancy analysis
+- **Latency simulation** — add variable edge weights that change over time
+- **Replay mode** — record and replay a simulation for training / presentation
+- **Multi-tenant networks** — isolate networks per user account
+- **Distributed WebSocket** — Redis-backed ConnectionManager for horizontal scaling
+- **Protocol simulation** — BGP / OSPF-style convergence timing

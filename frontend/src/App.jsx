@@ -6,6 +6,7 @@ import Docs from './pages/Docs'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
+import OAuthCallback from './pages/OAuthCallback'
 
 function ProtectedRoute({ children }) {
   const { isAuthed } = useAuth()
@@ -30,6 +31,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/oauth/callback" element={<OAuthCallback />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

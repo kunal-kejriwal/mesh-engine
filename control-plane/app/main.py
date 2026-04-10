@@ -15,7 +15,7 @@ import os
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import message, metrics, network, node, simulation, websocket, auth, nodes, history
+from app.api import message, metrics, network, node, simulation, websocket, auth, nodes, history, oauth, lab
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.core.config import get_settings
 from app.core.connection_manager import get_connection_manager
@@ -94,6 +94,8 @@ app.include_router(websocket.router)
 app.include_router(auth.router)
 app.include_router(nodes.router)
 app.include_router(history.router)
+app.include_router(oauth.router)
+app.include_router(lab.router)
 
 
 # ── Dashboard (static HTML) ───────────────────────────────────────────────────

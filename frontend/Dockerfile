@@ -14,9 +14,6 @@ COPY frontend/ .
 RUN mkdir -p public/docs
 COPY API_Documentation.md   public/docs/
 COPY About_MeshEngine.md    public/docs/
-COPY GIT_SETUP.md           public/docs/
-COPY LOCAL_SETUP.md         public/docs/
-COPY RUN_AND_TEST.md        public/docs/
 
 RUN npm run build
 
